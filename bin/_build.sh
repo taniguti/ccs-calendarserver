@@ -597,7 +597,7 @@ c_dependencies () {
   if [ -d /Applications/Server.app/Contents/ServerRoot/usr/bin ]; then
     macOSServerIsInstalled=yes
     pg_version="$(/Applications/Server.app/Contents/ServerRoot/usr/bin/pg_ctl --version | awk '{print $NF}')"
-  fi
+  fi;
 
 
   ruler;
@@ -633,7 +633,7 @@ c_dependencies () {
   if command -v postgres > /dev/null && [ ${macOSServerIsInstalled:-no} = no ]; then
     using_system "Postgres";
   else
-    local v="${pg_version:-9.5.3}";
+    local v="${pg_version:=9.5.3}";
     local n="postgresql";
     local p="${n}-${v}";
 
@@ -643,7 +643,17 @@ c_dependencies () {
       local enable_dtrace="";
     fi;
 
-    c_dependency -m "3f0c388566c688c82b01a0edf1e6b7a0" \
+    case $pg_version in
+      9.4.15)
+        CHKSUM="0aada0833a9208ae5fab966c73c39379"
+        ;;
+      *)
+        # v=9.5.3 (default)
+        CHKSUM="3f0c388566c688c82b01a0edf1e6b7a0"
+        ;;
+    esac;
+
+    c_dependency -m $CHKSUM \
       "PostgreSQL" "${p}" \
       "http://ftp.postgresql.org/pub/source/v${v}/${p}.tar.bz2" \
       ${enable_dtrace};
