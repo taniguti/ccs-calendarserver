@@ -592,9 +592,16 @@ c_dependencies () {
       --disable-macos-framework;
   fi;
 
+  ruler;
+  # For macOS X Server migration From Server 5.6 or earlier to 5.7.
+  if [ -d /Applications/Server.app/Contents/ServerRoot/usr/bin ]; then
+    macOSServerIsInstalled=yes
+    pg_version="$(/Applications/Server.app/Contents/ServerRoot/usr/bin/pg_ctl --version | awk '{print $NF}')"
+  fi
+
 
   ruler;
-  if command -v memcached > /dev/null; then
+  if command -v memcached > /dev/null && [ ${macOSServerIsInstalled:-no} = no ]; then
     using_system "memcached";
   else
     local v="2.0.21-stable";
@@ -623,10 +630,10 @@ c_dependencies () {
 
 
   ruler;
-  if command -v postgres > /dev/null; then
+  if command -v postgres > /dev/null && [ ${macOSServerIsInstalled:-no} = no ]; then
     using_system "Postgres";
   else
-    local v="9.5.3";
+    local v="${pg_version:-9.5.3}";
     local n="postgresql";
     local p="${n}-${v}";
 
