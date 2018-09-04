@@ -1,0 +1,68 @@
+#!/bin/bash
+#-
+#- Usage: create_calendar_user [-h] [-u username] [-p password]
+#- Create a standerd user for ccs server if it does not exist yet.
+#-
+#- OPTIONS:
+#-   -h   Show this message.
+#-   -u   user name. if not, it will be 'calendarserver'
+#-   -p   user's password. if not, generated automatically.
+#-        You can change it later if you want with administrator
+#-        privilege.
+#-
+
+function myhelp(){
+    grep '^#-' < "$0" | cut -c 4-
+    exit 0
+}
+
+function check_user(){
+    id "$1" > /dev/null 2>&1
+    if [ $? -eq 0 ]; then
+        echo "$1 already exists."
+        id $1
+        exit 1        
+    fi
+}
+
+function darwin_create_user(){
+    u="$1"
+    p="$2"
+    check_user "$u"
+    sysadminctl -addUser "$u" -password "$p" > /dev/null 2>&1
+    userhome=`id -P $u | awk -F: '{print $(NF - 1)}'`
+    # add drop-in sudoer file
+    echo "$u    ALL = (ALL) NOPASSWD:$userhome/ccs-calendarserver/contrib/calendarserver_conversion.py" > /private/etc/sudoers.d/sudoer.$u
+    chmod 440 /private/etc/sudoers.d/sudoer.$u
+    finger "$u" | head -2
+    echo "$u can execute $userhome/ccs-calendarserver/contrib/calendarserver_conversion.py with sudo."
+}
+
+while getopts hu:p: sw
+do
+    case $sw in
+    u )
+        username="${OPTARG}"
+    ;;
+    p )
+        upasswd="${OPTARG}"
+    ;;
+    * )
+        myhelp
+    ;;
+    esac
+done
+
+if [ `whoami` != 'root' ]; then
+    echo "Use me with 'sudo'"
+    myhelp
+fi
+
+case `uname -s` in
+    Darwin )
+        darwin_create_user "${username:=calendarserver}" "${upasswd:=`uuidgen`}"
+    ;;
+    *)
+        echo "Not implemented yet for `uname -s`"
+    ;;
+esac
